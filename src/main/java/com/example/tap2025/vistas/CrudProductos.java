@@ -1,6 +1,7 @@
 package com.example.tap2025.vistas;
 
 import com.example.tap2025.modelos.Producto;
+import com.example.tap2025.utilidades.ReportesPDF;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -28,6 +29,9 @@ public class CrudProductos {
         Button btnImagen = new Button("Elegir Imagen");
         Label lblImagen = new Label("Sin imagen");
         Button btnAgregar = new Button("Agregar Producto");
+        Button btnEditar = new Button("Editar Producto");
+        Button btnEliminar = new Button("Eliminar Producto");
+        Button btnReporte = new Button("Generar Reporte PDF");
 
         TableView<Producto> tableView = new TableView<>();
         TableColumn<Producto, String> tblColNombre = new TableColumn<>("Nombre");
@@ -76,9 +80,6 @@ public class CrudProductos {
             }
         });
 
-        Button btnEditar = new Button("Editar");
-        Button btnEliminar = new Button("Eliminar");
-
         btnEditar.setOnAction(event -> {
             Producto elegido = tableView.getSelectionModel().getSelectedItem();
             if (elegido != null) {
@@ -99,22 +100,37 @@ public class CrudProductos {
             }
         });
 
+        btnReporte.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Guardar Reporte PDF");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf"));
+            File archivo = fileChooser.showSaveDialog(stage);
+
+            if (archivo != null) {
+                ReportesPDF.generarReporteProductosMasVendidos(archivo.getAbsolutePath());
+            }
+        });
+
         VBox vBoxContenido = new VBox(10,
                 new Label("Nombre"), txtFieldNombre,
                 new Label("Precio"), txtFieldPrecio,
                 new Label("Categoría"), comboBoxCategoria,
                 btnImagen, lblImagen,
-                btnAgregar, btnEditar, btnEliminar
+                btnAgregar, btnEditar, btnEliminar,
+                btnReporte
         );
         vBoxContenido.setPadding(new Insets(10));
+        vBoxContenido.setStyle("-fx-background-color: #f0f8ff; -fx-border-radius: 15; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, gray, 10, 0, 0, 5);");
 
         VBox vBoxTabla = new VBox(tableView);
-        vBoxTabla.setPadding(new Insets(10));
+        vBoxTabla.setPadding(new Insets(15));
+        vBoxTabla.setStyle("-fx-background-color: #ffffff; -fx-border-radius: 15; -fx-background-radius: 15;");
 
         HBox root = new HBox(20, vBoxContenido, vBoxTabla);
-        root.setPadding(new Insets(15));
+        root.setPadding(new Insets(20));
+        root.setStyle("-fx-background-color: #e0f7fa;");
 
-        Scene escena = new Scene(root, 1000, 400);
+        Scene escena = new Scene(root, 1100, 500);
         stage.setScene(escena);
         stage.setTitle("Gestionar Productos");
         stage.show();

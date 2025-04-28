@@ -1,0 +1,49 @@
+[33m102534b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelopment[m[33m, [m[1;31morigin/development[m[33m)[m HEAD@{0}: commit (merge): Avance Proyecto
+[33mca1fc8a[m HEAD@{1}: commit: Avance Proyecto
+[33m13dbd40[m[33m ([m[1;32mmain[m[33m)[m HEAD@{2}: checkout: moving from main to development
+[33m13dbd40[m[33m ([m[1;32mmain[m[33m)[m HEAD@{3}: commit: Parte 1-6 del proyecto (corregir)
+[33mac35067[m HEAD@{4}: commit: Parte 1 Proyecto (corregir)
+[33m2bd3b1e[m HEAD@{5}: commit: Modificación calculadora
+[33me43bb49[m HEAD@{6}: commit: Hilos
+[33m1413025[m HEAD@{7}: commit: Inserción
+[33m700c5ba[m HEAD@{8}: commit: Integración DELETE
+[33m8678034[m HEAD@{9}: commit: Agregando comentarios de la practica
+[33m5b76f77[m HEAD@{10}: commit: Practica Rompecabezas
+[33m9e69c56[m HEAD@{11}: commit: TableView de Clientes
+[33m32f5ed0[m HEAD@{12}: commit: Rompecabezas avance 1
+[33m7225176[m HEAD@{13}: commit: Implementación de las operaciones en la calculadora
+[33ma7d2ae0[m HEAD@{14}: commit: Creación de clase para cada cliente
+[33mc0b8091[m HEAD@{15}: commit: Diseño de tabla
+[33m3699c7e[m HEAD@{16}: commit: Conexion de datos registrados
+[33m0e53d1e[m HEAD@{17}: commit: Conexión
+[33m6bbd0eb[m HEAD@{18}: commit: Ventas Restaurante
+[33m5aba728[m HEAD@{19}: commit: Colores para la calculadora
+[33m426abd1[m HEAD@{20}: commit: Modificación para excepciones
+[33m760f9bc[m HEAD@{21}: commit: Calculadora
+[33m23a1b41[m HEAD@{22}: commit: Establecimiento de Menus
+[33m63f3568[m HEAD@{23}: commit (initial): Mi primer commit
+[33m13dbd40[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelopment[m[33m, [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to 13dbd40
+[33m102534b[m[33m ([m[1;31morigin/development[m[33m)[m HEAD@{1}: commit (merge): Avance Proyecto
+[33mca1fc8a[m HEAD@{2}: commit: Avance Proyecto
+[33m13dbd40[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelopment[m[33m, [m[1;32mmain[m[33m)[m HEAD@{3}: checkout: moving from main to development
+[33m13dbd40[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelopment[m[33m, [m[1;32mmain[m[33m)[m HEAD@{4}: commit: Parte 1-6 del proyecto (corregir)
+[33mac35067[m HEAD@{5}: commit: Parte 1 Proyecto (corregir)
+[33m2bd3b1e[m HEAD@{6}: commit: Modificación calculadora
+[33me43bb49[m HEAD@{7}: commit: Hilos
+[33m1413025[m HEAD@{8}: commit: Inserción
+[33m700c5ba[m HEAD@{9}: commit: Integración DELETE
+[33m8678034[m HEAD@{10}: commit: Agregando comentarios de la practica
+[33m5b76f77[m HEAD@{11}: commit: Practica Rompecabezas
+[33m9e69c56[m HEAD@{12}: commit: TableView de Clientes
+[33m32f5ed0[m HEAD@{13}: commit: Rompecabezas avance 1
+[33m7225176[m HEAD@{14}: commit: Implementación de las operaciones en la calculadora
+[33ma7d2ae0[m HEAD@{15}: commit: Creación de clase para cada cliente
+[33mc0b8091[m HEAD@{16}: commit: Diseño de tabla
+[33m3699c7e[m HEAD@{17}: commit: Conexion de datos registrados
+[33m0e53d1e[m HEAD@{18}: commit: Conexión
+[33m6bbd0eb[m HEAD@{19}: commit: Ventas Restaurante
+[33m5aba728[m HEAD@{20}: commit: Colores para la calculadora
+[33m426abd1[m HEAD@{21}: commit: Modificación para excepciones
+[33m760f9bc[m HEAD@{22}: commit: Calculadora
+[33m23a1b41[m HEAD@{23}: commit: Establecimiento de Menus
+[33m63f3568[m HEAD@{24}: commit (initial): Mi primer commit
