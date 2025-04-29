@@ -15,13 +15,13 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class VentasRestaurante {
@@ -34,12 +34,12 @@ public class VentasRestaurante {
     private final Map<String, List<Producto>> categoriaProductos = new HashMap<>();
     private int mesaSeleccionada = 1;
     private final Map<Integer, Button> botonesMesas = new HashMap<>();
+    private final Map<Integer, Boolean> mesasOcupadas = new HashMap<>();
 
     public void mostrar(Stage stage) {
         inicializarProductos();
         VBox root = new VBox(10);
         root.setPadding(new Insets(10));
-
         mostrarMesas();
 
         //Esto es para tener las categorías de forma tipo táctil, solamente que usamos en este caso el mouse.
@@ -51,50 +51,21 @@ public class VentasRestaurante {
         tilePaneProductos.setVgap(10);
         tilePaneProductos.setPrefColumns(4);
 
-        Button btnGenerarTicket = new Button("Generar Ticket (en PDF).");
+        Button btnGenerarTicket = new Button("Generar Ticket PDF");
+        btnGenerarTicket.setStyle("-fx-font-size: 14px; -fx-background-color: #EBC093;");
 
-        btnGenerarTicket.setOnAction(e -> {
-            if (mesaSeleccionada <= 0) {
-                Alert alerta = new Alert(Alert.AlertType.ERROR, "Tienes que seleccionar una mesa.");
-                alerta.showAndWait();
-                return;
-            }
-            if (pedidosPorMesa.get(mesaSeleccionada) == null || pedidosPorMesa.get(mesaSeleccionada).isEmpty()) {
-                Alert alerta = new Alert(Alert.AlertType.WARNING, "No hay productos seleccionados.");
-                alerta.showAndWait();
-                return;
-            }
-
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Guardar Ticket PDF");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivo PDF", "*.pdf"));
-            File archivo = fileChooser.showSaveDialog(stage);
-
-            if (archivo != null) {
-                double totalPedido = pedidosPorMesa.get(mesaSeleccionada).stream()
-                        .mapToDouble(Producto::getTotal)
-                        .sum();
-                TicketPDF.generarTicket("Mesa " + mesaSeleccionada, pedidosPorMesa.get(mesaSeleccionada), totalPedido, archivo);
-
-                Alert alerta = new Alert(Alert.AlertType.INFORMATION, "Ticket creado :)");
-                alerta.showAndWait();
-
-                //De esta forma limpiamos el pedido de la mesa.
-                pedidosPorMesa.get(mesaSeleccionada).clear();
-                actualizarPedido();
-            }
-        });
+        btnGenerarTicket.setOnAction(event -> generarTicket(stage));
 
         VBox vboxPedido = new VBox(10);
         vboxPedido.setPadding(new Insets(10));
         vboxPedido.getChildren().addAll(new Label("Pedido actual."), listViewPedido, lblTotal, btnGenerarTicket);
 
         Button btnGuardar = new Button("Guardar Pedido");
-        btnGuardar.setStyle("-fx-font-size: 18px; -fx-background-color: #83CBFF;");
+        btnGuardar.setStyle("-fx-font-size: 14px; -fx-background-color: #83CBFF;");
         btnGuardar.setOnAction(e -> guardarPedido());
 
         Button btnLimpiar = new Button("Limpiar Pedido.");
-        btnLimpiar.setStyle("-fx-font-size: 18px; -fx-background-color: #EF9A9A;");
+        btnLimpiar.setStyle("-fx-font-size: 14px; -fx-background-color: #EF9A9A;");
         btnLimpiar.setOnAction(e -> limpiarPedido());
 
         vboxPedido.getChildren().addAll(btnGuardar, btnLimpiar);
@@ -120,27 +91,34 @@ public class VentasRestaurante {
         mesaContainer.setVgap(10);
 
         for (int i = 1; i <= 20; i++) {
-            int numeroMesa = i;
-            Button botonMesa = new Button("Mesa " + numeroMesa);
-            botonMesa.setPrefSize(100, 60);
-            botonMesa.setStyle("-fx-font-size: 16px; -fx-background-color: #AAD1AC;");
-            botonMesa.setOnAction(e -> {
-                mesaSeleccionada = numeroMesa;
-                actualizarSeleccionMesas(); //Esto hace que se actualicen los colores.
+            int numMesa = i;
+            Button btnMesa = new Button("Mesa " + numMesa);
+            btnMesa.setPrefSize(100, 60);
+            btnMesa.setStyle("-fx-font-size: 16px; -fx-background-color: #AAD1AC;");
+            btnMesa.setOnAction(e -> {
+                mesaSeleccionada = numMesa;
+                actualizarColoresMesas(); //Esto hace que se actualicen los colores.
                 mostrarProductos();
+                actualizarPedido();
             });
-            mesaContainer.getChildren().add(botonMesa);
-            botonesMesas.put(numeroMesa, botonMesa);
-            pedidosPorMesa.put("Mesa " + numeroMesa, FXCollections.observableArrayList());
+            mesaContainer.getChildren().add(btnMesa);
+            botonesMesas.put(numMesa, btnMesa);
+            pedidosPorMesa.put("Mesa " + numMesa, FXCollections.observableArrayList());
+            mesasOcupadas.put(numMesa, false); //Para que al principio este libre la mesa.
         }
     }
 
-    private void actualizarSeleccionMesas() {
+    private void actualizarColoresMesas() {
         for (Map.Entry<Integer, Button> entry : botonesMesas.entrySet()) {
-            if (entry.getKey() == mesaSeleccionada) {
-                entry.getValue().setStyle("-fx-font-size: 16px; -fx-background-color: #90CAF9;");
+            int numMesa = entry.getKey();
+            Button btn = entry.getValue();
+
+            if (mesaSeleccionada == numMesa) {
+                btn.setStyle("-fx-font-size: 16px; -fx-background-color: #90CAF9;"); //Seleccionada.
+            } else if (mesasOcupadas.getOrDefault(numMesa, false)) {
+                btn.setStyle("-fx-font-size: 16px; -fx-background-color: #FFCC80;"); //Ocupada
             } else {
-                entry.getValue().setStyle("-fx-font-size: 16px; -fx-background-color: #A5D6A7;");
+                btn.setStyle("-fx-font-size: 16px; -fx-background-color: #A5D6A7;"); //Desocupada.
             }
         }
     }
@@ -203,10 +181,6 @@ public class VentasRestaurante {
             total += p.getTotal();
         }
         lblTotal.setText("Total: $" + total);
-
-        if (!pedido.isEmpty()) {
-            listViewPedido.getSelectionModel().select(listViewPedido.getItems().size() - 1);
-        }
     }
 
     private void guardarPedido() {
@@ -232,21 +206,59 @@ public class VentasRestaurante {
                 pstmt.executeUpdate();
             }
             pstmt.close();
+            mesasOcupadas.put(mesaSeleccionada, true); //Se marca como ocupada.
+            actualizarColoresMesas();
+            actualizarPedido();
             System.out.println("Pedido guardado en la base de datos.");
         } catch (Exception e) {
             e.printStackTrace();
         }
-        pedido.clear();
-        actualizarPedido();
     }
 
     private void limpiarPedido() {
         String mesa = "Mesa " + mesaSeleccionada;
-        pedidosPorMesa.get(mesa).clear();
-        actualizarPedido();
+        ObservableList<Producto> pedido = pedidosPorMesa.get(mesa);
+        int index = listViewPedido.getSelectionModel().getSelectedIndex();
+        if (index >= 0 && index < pedido.size()){
+            pedido.remove(index);
+            actualizarPedido();
+        } else {
+            Alert aleta = new Alert(Alert.AlertType.WARNING, "Elige el producto a eliminar.");
+            aleta.showAndWait();
+        }
+    }
+
+    private void generarTicket(Stage stage) {
+        String mesa = "Mesa " + mesaSeleccionada;
+        ObservableList<Producto> pedido = pedidosPorMesa.get(mesa);
+
+        if (pedido == null || pedido.isEmpty()) {
+            Alert alerta = new Alert(Alert.AlertType.WARNING, "No hay productos en el pedido.");
+            alerta.showAndWait();
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Guardar Ticket PDF");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivo PDF", "*.pdf"));
+        File archivo = fileChooser.showSaveDialog(stage);
+
+        if (archivo != null) {
+            double totalPedido = pedido.stream().mapToDouble(Producto::getTotal).sum();
+            TicketPDF.generarTicket("Mesa " + mesaSeleccionada, pedido, totalPedido, archivo);
+
+            Alert alerta = new Alert(Alert.AlertType.INFORMATION, "Ticket generado exitosamente.");
+            alerta.showAndWait();
+
+            pedido.clear();
+            mesasOcupadas.put(mesaSeleccionada, false);
+            actualizarColoresMesas();
+            actualizarPedido();
+        }
     }
 
     private void inicializarProductos() {
+        categoriaProductos.clear();
         categoriaProductos.put("Entradas", List.of(
                 new Producto("Alitas", 249, "Entradas", "images/Entradas/Alitas.jpg"),
                 new Producto("Boneless", 139, "Entradas", "/images/Entradas/Boneless.jpg"),
@@ -414,5 +426,26 @@ public class VentasRestaurante {
                 new Producto("Torres 20 años", 325, "Brandy", "/images/Brandy/Torres20.jpg"),
                 new Producto("Terry centenario", 165, "Brandy", "/images/Brandy/TerryCentenario.jpg")
         ));
+        File archivo = new File("productos.csv");
+        if (!archivo.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(archivo))) {
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                String[] datos = linea.split(",", -1);
+                if (datos.length == 5) {
+                    String nombre = datos[0];
+                    double precio = Double.parseDouble(datos[1]);
+                    int cantidad = Integer.parseInt(datos[2]); //Esta variable por ahora no la usamos.
+                    String categoria = datos[3];
+                    String imagen = datos[4];
+
+                    Producto productoNuevo = new Producto(nombre, precio, categoria, imagen);
+                    categoriaProductos.computeIfAbsent(categoria, k -> new ArrayList<>()).add(productoNuevo);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error al leer productos: " + e.getMessage());
+        }
     }
 }

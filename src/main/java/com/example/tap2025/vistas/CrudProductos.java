@@ -1,6 +1,7 @@
 package com.example.tap2025.vistas;
 
 import com.example.tap2025.modelos.Producto;
+import com.example.tap2025.modelos.conexion;
 import com.example.tap2025.utilidades.ReportesPDF;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -14,23 +15,25 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 public class CrudProductos {
     private final ObservableList<Producto> productos = FXCollections.observableArrayList();
-    private static final String RUTA_ARCHIVO = "productos.csv";
 
     public void mostrar(Stage stage) {
-        cargarProductosDesdeArchivo();
-
+        cargarProductosDesdeBaseDeDatos();
         TextField txtFieldNombre = new TextField();
         TextField txtFieldPrecio = new TextField();
         ComboBox<String> comboBoxCategoria = new ComboBox<>();
-        comboBoxCategoria.getItems().addAll("Entradas", "Platillos", "Bebidas", "Postres");
+        comboBoxCategoria.getItems().addAll("Aperitivos", "Platillos", "Bebidas", "Postres");
         Button btnImagen = new Button("Elegir Imagen");
         Label lblImagen = new Label("Sin imagen");
         Button btnAgregar = new Button("Agregar Producto");
         Button btnEditar = new Button("Editar Producto");
         Button btnEliminar = new Button("Eliminar Producto");
+        Button btnAsignarInsumos = new Button("Asignar Insumos");
         Button btnReporte = new Button("Generar Reporte PDF");
 
         TableView<Producto> tableView = new TableView<>();
@@ -52,10 +55,16 @@ public class CrudProductos {
         btnImagen.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Elegir Imagen");
-            fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg"));
+            fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Imágenes válidas", "*.png", "*.jpg", "*.jpeg"));
             File fileImagen = fileChooser.showOpenDialog(stage);
             if (fileImagen != null) {
-                lblImagen.setText(fileImagen.getAbsolutePath());
+                String ruta = fileImagen.getAbsolutePath().toLowerCase();
+                if (ruta.endsWith(".png") || ruta.endsWith(".jpg") || ruta.endsWith(".jpeg")) {
+                    lblImagen.setText(fileImagen.getAbsolutePath());
+                } else {
+                    Alert alerta = new Alert(Alert.AlertType.ERROR, "La imagen tiene que ser formato PNG, JPG o JPEG.");
+                    alerta.showAndWait();
+                }
             }
         });
 
@@ -68,8 +77,9 @@ public class CrudProductos {
                 if (nombre.isEmpty() || categoria == null || imagen.equals("Sin imagen")) {
                     throw new IllegalArgumentException("Faltan datos");
                 }
-                productos.add(new Producto(nombre, precio, categoria, imagen));
-                guardarProductosEnArchivo();
+                Producto nuevo = new Producto(nombre, precio, categoria, imagen);
+                productos.add(nuevo);
+                guardarProductosEnBaseDeDatos(nuevo);
                 txtFieldNombre.clear();
                 txtFieldPrecio.clear();
                 comboBoxCategoria.setValue(null);
@@ -88,7 +98,7 @@ public class CrudProductos {
                 comboBoxCategoria.setValue(elegido.getCategoria());
                 lblImagen.setText(elegido.getImagen());
                 productos.remove(elegido);
-                guardarProductosEnArchivo();
+                eliminarProductoEnBaseDeDatos(elegido); ;
             }
         });
 
@@ -96,8 +106,12 @@ public class CrudProductos {
             Producto elegido = tableView.getSelectionModel().getSelectedItem();
             if (elegido != null) {
                 productos.remove(elegido);
-                guardarProductosEnArchivo();
+                eliminarProductoEnBaseDeDatos(elegido); ;
             }
+        });
+
+        btnAsignarInsumos.setOnAction(event -> {
+            new GestionInsumos().mostrar(stage);
         });
 
         btnReporte.setOnAction(event -> {
@@ -136,36 +150,64 @@ public class CrudProductos {
         stage.show();
     }
 
-    private void guardarProductosEnArchivo() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(RUTA_ARCHIVO))) {
-            for (Producto p : productos) {
-                writer.println(p.getNombre() + "," + p.getPrecio() + "," + p.getCantidad() + "," + p.getCategoria() + "," + p.getImagen());
+    private void guardarProductosEnBaseDeDatos(Producto p) {
+        try {
+            if (conexion.connection == null || conexion.connection.isClosed()) {
+                conexion.createConnection();
             }
-        } catch (IOException e) {
-            System.err.println("Error al guardar productos: " + e.getMessage());
+            String sql = "INSERT INTO productos (nombre, precio, cantidad, categoria, imagen) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            pstmt.setString(1, p.getNombre());
+            pstmt.setDouble(2, p.getPrecio());
+            pstmt.setInt(3, p.getCantidad());
+            pstmt.setString(4, p.getCategoria());
+            pstmt.setString(5, p.getImagen());
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    private void cargarProductosDesdeArchivo() {
-        productos.clear();
-        File archivo = new File(RUTA_ARCHIVO);
-        if (!archivo.exists()) return;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(archivo))) {
-            String linea;
-            while ((linea = reader.readLine()) != null) {
-                String[] datos = linea.split(",", -1);
-                if (datos.length == 5) {
-                    String nombre = datos[0];
-                    double precio = Double.parseDouble(datos[1]);
-                    int cantidad = Integer.parseInt(datos[2]);
-                    String categoria = datos[3];
-                    String imagen = datos[4];
-                    productos.add(new Producto(nombre, precio, cantidad, categoria, imagen));
-                }
+    private void eliminarProductoEnBaseDeDatos(Producto p) {
+        try {
+            if (conexion.connection == null || conexion.connection.isClosed()) {
+                conexion.createConnection();
             }
-        } catch (IOException e) {
-            System.err.println("Error al leer productos: " + e.getMessage());
+            String sql = "DELETE FROM productos WHERE nombre = ? AND categoria = ?";
+            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            pstmt.setString(1, p.getNombre());
+            pstmt.setString(2, p.getCategoria());
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void cargarProductosDesdeBaseDeDatos() {
+        productos.clear();
+        try {
+            if (conexion.connection == null || conexion.connection.isClosed()) {
+                conexion.createConnection();
+            }
+            String sql = "SELECT * FROM productos";
+            Statement stmt = conexion.connection.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+
+            while (rs.next()) {
+                productos.add(new Producto(
+                        rs.getString("nombre"),
+                        rs.getDouble("precio"),
+                        rs.getInt("cantidad"),
+                        rs.getString("categoria"),
+                        rs.getString("imagen")
+                ));
+            }
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

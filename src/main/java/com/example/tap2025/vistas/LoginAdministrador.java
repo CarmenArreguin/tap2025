@@ -77,27 +77,30 @@ public class LoginAdministrador {
         });
         Button btnListaReservaciones = new Button("Ver Reservaciones");
         btnListaReservaciones.setOnAction(e -> {
+            stgMenuAdmin.close();
             new ListaReservaciones().mostrar(primaryStage);
         });
 
         Button btnGestionInsumos = new Button("Gestionar Insumos");
         btnGestionInsumos.setOnAction(e -> {
+            stgMenuAdmin.close();
             new GestionInsumos().mostrar(primaryStage);
         });
 
         Button btnConsultarInsumos = new Button("Consultar Insumos Producto");
         btnConsultarInsumos.setOnAction(e -> {
+            stgMenuAdmin.close();
             new ConsultarInsumosProductos().mostrar(primaryStage);
         });
 
-        btnCrudProductos.setStyle("-fx-font-size: 16px;");
-        btnReservaciones.setStyle("-fx-font-size: 16px;");
-        btnReportesGraficas.setStyle("-fx-font-size: 16px;");
-        btnListaReservaciones.setStyle("-fx-font-size: 16px;");
-        btnGestionInsumos.setStyle("-fx-font-size: 16px;");
-        btnConsultarInsumos.setStyle("-fx-font-size: 16px;");
+        btnCrudProductos.setStyle("-fx-font-size: 12px;");
+        btnReservaciones.setStyle("-fx-font-size: 12px;");
+        btnReportesGraficas.setStyle("-fx-font-size: 12px;");
+        btnListaReservaciones.setStyle("-fx-font-size: 12px;");
+        btnGestionInsumos.setStyle("-fx-font-size: 12px;");
+        btnConsultarInsumos.setStyle("-fx-font-size: 12px;");
 
-        root.getChildren().addAll(btnCrudProductos, btnReservaciones, btnReportesGraficas);
+        root.getChildren().addAll(btnCrudProductos, btnReservaciones, btnReportesGraficas, btnListaReservaciones, btnGestionInsumos, btnConsultarInsumos);
 
         Scene escena = new Scene(root, 400, 300);
         stgMenuAdmin.setScene(escena);
