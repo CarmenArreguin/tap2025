@@ -1,6 +1,7 @@
 package com.example.tap2025.vistas;
 
 import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.InsumoProductos;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -16,8 +17,8 @@ import java.sql.Statement;
 
 public class ConsultarInsumosProductos {
     private ComboBox<String> comboProductos;
-    private TableView<InsumoProducto> tableView;
-    private ObservableList<InsumoProducto> listaInsumos;
+    private TableView<InsumoProductos> tableView;
+    private ObservableList<InsumoProductos> listaInsumos;
 
     public void mostrar(Stage primaryStage) {
         Stage ventanaConsultar = new Stage();
@@ -34,13 +35,13 @@ public class ConsultarInsumosProductos {
         tableView = new TableView<>();
         listaInsumos = FXCollections.observableArrayList();
 
-        TableColumn<InsumoProducto, String> colInsumo = new TableColumn<>("Insumo");
+        TableColumn<InsumoProductos, String> colInsumo = new TableColumn<>("Insumo");
         colInsumo.setCellValueFactory(new PropertyValueFactory<>("nombreInsumo"));
 
-        TableColumn<InsumoProducto, Double> colCantidad = new TableColumn<>("Cantidad");
+        TableColumn<InsumoProductos, Double> colCantidad = new TableColumn<>("Cantidad");
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
 
-        TableColumn<InsumoProducto, String> colUnidad = new TableColumn<>("Unidad de Medida");
+        TableColumn<InsumoProductos, String> colUnidad = new TableColumn<>("Unidad de Medida");
         colUnidad.setCellValueFactory(new PropertyValueFactory<>("unidadMedida"));
 
         tableView.getColumns().addAll(colInsumo, colCantidad, colUnidad);
@@ -104,7 +105,7 @@ public class ConsultarInsumosProductos {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                listaInsumos.add(new InsumoProducto(
+                listaInsumos.add(new InsumoProductos(
                         rs.getString("nombre"),
                         rs.getDouble("cantidad"),
                         rs.getString("unidad_medida")
@@ -131,30 +132,5 @@ public class ConsultarInsumosProductos {
         rs.close();
         pstmt.close();
         return id;
-    }
-
-    //Esta es la clase interna para el modelo.
-    public static class InsumoProducto {
-        private String nombreInsumo;
-        private double cantidad;
-        private String unidadMedida;
-
-        public InsumoProducto(String nombreInsumo, double cantidad, String unidadMedida) {
-            this.nombreInsumo = nombreInsumo;
-            this.cantidad = cantidad;
-            this.unidadMedida = unidadMedida;
-        }
-
-        public String getNombreInsumo() {
-            return nombreInsumo;
-        }
-
-        public double getCantidad() {
-            return cantidad;
-        }
-
-        public String getUnidadMedida() {
-            return unidadMedida;
-        }
     }
 }
