@@ -29,7 +29,7 @@ public class ReporteGraficas {
         btnExportarPDF.setStyle("-fx-font-size: 16px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 10;");
 
         btnExportarPDF.setOnAction(e -> {
-            ReportesPDF.generarReporteProductosMasVendidos("productos_mas_vendidos.pdf");
+            ReportesPDF.generarReporteProductosMasVendidos("C:/Users/100032624/StudioProjects/tap2025/productos_mas_vendidos.pdf");
         });
 
         root.getChildren().addAll(graficaProductos, graficaVentasDia, btnExportarPDF);
@@ -75,7 +75,7 @@ public class ReporteGraficas {
         yAxis.setLabel("Total de ventas");
 
         XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Ventas por Día");
+        series.setName("Ventas");
 
         try {
             if (conexion.connection == null || conexion.connection.isClosed()) {

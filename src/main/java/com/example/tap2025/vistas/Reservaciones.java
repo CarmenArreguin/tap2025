@@ -52,6 +52,23 @@ public class Reservaciones {
                 return;
             }
 
+            if (nombre.contains("+-*/?#$%=|°") || fecha.contains("ABCDEFGHIJKLMNÑOPQRSTUVWXYZ")){
+                lblMensaje.setText("Datos ingresados son incorrectos.");
+                return;
+            }
+
+            // Validación del nombre (solo letras y acentos)
+            if (!nombre.matches("^[\\p{L} ]+$")) {
+                lblMensaje.setText("El nombre solo puede contener letras y acentos.");
+                return;
+            }
+
+            // Validación del formato de hora (HH:MM, 24 horas)
+            if (!hora.matches("^([01]?[0-9]|2[0-3]):[0-5][0-9]$")) {
+                lblMensaje.setText("La hora debe estar en formato 24 horas (HH:MM).");
+                return;
+            }
+
             guardarReservacion(nombre, personas, fecha, hora, mesa);
             lblMensaje.setText("Reservación guardada exitosamente :)");
         });
