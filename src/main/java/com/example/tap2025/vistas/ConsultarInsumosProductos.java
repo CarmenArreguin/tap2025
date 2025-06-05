@@ -1,6 +1,6 @@
 package com.example.tap2025.vistas;
 
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import com.example.tap2025.modelos.InsumoProductos;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -58,10 +58,10 @@ public class ConsultarInsumosProductos {
     private void cargarProductos() {
         ObservableList<String> productos = FXCollections.observableArrayList();
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT nombre FROM productos");
 
             while (rs.next()) {
@@ -89,18 +89,18 @@ public class ConsultarInsumosProductos {
         listaInsumos.clear();
 
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
 
             int idProducto = obtenerIdProducto(productoSeleccionado);
 
             String sql = "SELECT i.nombre, pi.cantidad, i.unidad_medida " +
                     "FROM producto_insumos pi " +
-                    "INNER JOIN insumos i ON pi.id_insumo = i.id " +
+                    "INNER JOIN insumos i ON pi.id_insumo = i.id_insumo " +
                     "WHERE pi.id_producto = ?";
 
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
             pstmt.setInt(1, idProducto);
             ResultSet rs = pstmt.executeQuery();
 
@@ -121,13 +121,13 @@ public class ConsultarInsumosProductos {
     }
 
     private int obtenerIdProducto(String nombre) throws Exception {
-        String sql = "SELECT id FROM productos WHERE nombre = ?";
-        PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+        String sql = "SELECT id_producto FROM productos WHERE nombre = ?";
+        PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
         pstmt.setString(1, nombre);
         ResultSet rs = pstmt.executeQuery();
         int id = 0;
         if (rs.next()) {
-            id = rs.getInt("id");
+            id = rs.getInt("id_producto");
         }
         rs.close();
         pstmt.close();

@@ -3,7 +3,7 @@ package com.example.tap2025.modelos;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
-public class conexion {
+public class Conexion {
     private static String DB = "restaurantec";
     private static String USER = "admin2";
     private static String PWD = "1234";

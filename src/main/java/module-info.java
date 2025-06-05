@@ -1,7 +1,7 @@
 module com.example.tap2025 {
     requires javafx.controls;
     requires javafx.fxml;
-
+    requires javafx.swing;
 
     opens com.example.tap2025 to javafx.fxml;
     requires org.kordamp.bootstrapfx.core;
@@ -12,4 +12,6 @@ module com.example.tap2025 {
     requires java.desktop;
     requires itextpdf;
     opens com.example.tap2025.modelos;
+    exports com.example.tap2025.vistas;
+    opens com.example.tap2025.vistas to javafx.fxml;
 }

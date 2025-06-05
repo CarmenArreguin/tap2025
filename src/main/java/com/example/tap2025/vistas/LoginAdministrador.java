@@ -46,65 +46,69 @@ public class LoginAdministrador {
             }
         });
 
-        Scene escena = new Scene(gp, 300, 200);
+        Scene escena = new Scene(gp, 350, 220);
         stgLogin.setScene(escena);
         stgLogin.show();
     }
 
     private void mostrarMenuAdministrador(Stage primaryStage) {
         Stage stgMenuAdmin = new Stage();
-        stgMenuAdmin.setTitle("Menú Administrador :)");
+        stgMenuAdmin.setTitle("Menú Administrador");
 
         VBox root = new VBox(20);
         root.setPadding(new Insets(20));
 
         Button btnCrudProductos = new Button("CRUD Productos");
         btnCrudProductos.setOnAction(e -> {
-            stgMenuAdmin.close();
             new CrudProductos().mostrar(primaryStage);
+        });
+
+        Button btnClientes = new Button("Gestión de Clientes");
+        btnClientes.setOnAction(e -> {
+            new ListaClientes();
+        });
+
+        Button btnEmpleados = new Button("Gestión de Empleados");
+        btnEmpleados.setOnAction(e -> {
+            new ListaEmpleados();
         });
 
         Button btnReservaciones = new Button("Reservaciones");
         btnReservaciones.setOnAction(e -> {
-            stgMenuAdmin.close();
             new Reservaciones().mostrar(primaryStage);
         });
 
         Button btnReportesGraficas = new Button("Reportes y Gráficas");
         btnReportesGraficas.setOnAction(e -> {
-            stgMenuAdmin.close();
             new ReporteGraficas().mostrar(primaryStage);
         });
         Button btnListaReservaciones = new Button("Ver Reservaciones");
         btnListaReservaciones.setOnAction(e -> {
-            stgMenuAdmin.close();
             new ListaReservaciones().mostrar(primaryStage);
         });
 
         Button btnGestionInsumos = new Button("Gestionar Insumos");
         btnGestionInsumos.setOnAction(e -> {
-            stgMenuAdmin.close();
             new GestionInsumos().mostrar(primaryStage);
         });
 
         Button btnConsultarInsumos = new Button("Consultar Insumos Producto");
         btnConsultarInsumos.setOnAction(e -> {
-            stgMenuAdmin.close();
             new ConsultarInsumosProductos().mostrar(primaryStage);
         });
 
         btnCrudProductos.setStyle("-fx-font-size: 12px;");
+        btnClientes.setStyle("-fx-font-size: 12px;");
         btnReservaciones.setStyle("-fx-font-size: 12px;");
         btnReportesGraficas.setStyle("-fx-font-size: 12px;");
         btnListaReservaciones.setStyle("-fx-font-size: 12px;");
         btnGestionInsumos.setStyle("-fx-font-size: 12px;");
         btnConsultarInsumos.setStyle("-fx-font-size: 12px;");
 
-        root.getChildren().addAll(btnCrudProductos, btnReservaciones, btnReportesGraficas, btnListaReservaciones, btnGestionInsumos, btnConsultarInsumos);
+        root.getChildren().addAll(btnCrudProductos, btnClientes, btnEmpleados, btnReservaciones, btnReportesGraficas, btnListaReservaciones, btnGestionInsumos, btnConsultarInsumos);
 
-        Scene escena = new Scene(root, 400, 300);
+        Scene escena = new Scene(root, 500, 400);
         stgMenuAdmin.setScene(escena);
         stgMenuAdmin.show();
     }
-
 }

@@ -1,11 +1,13 @@
 package com.example.tap2025.vistas;
 
 import com.example.tap2025.modelos.Producto;
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import com.example.tap2025.utilidades.ReportesPDF;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -14,27 +16,36 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.*;
+import java.io.File;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class CrudProductos {
     private final ObservableList<Producto> productos = FXCollections.observableArrayList();
+    private final ObservableList<String> categorias = FXCollections.observableArrayList();
 
     public void mostrar(Stage stage) {
         cargarProductosDesdeBaseDeDatos();
+        cargarCategoriasDesdeBaseDeDatos();
         TextField txtFieldNombre = new TextField();
         TextField txtFieldPrecio = new TextField();
         ComboBox<String> comboBoxCategoria = new ComboBox<>();
-        comboBoxCategoria.getItems().addAll("Aperitivos", "Platillos", "Bebidas", "Postres");
+        comboBoxCategoria.setItems(categorias);
+        // Botón para agregar nueva categoría
+        Button btnAgregarCategoria = new Button("+");
+        btnAgregarCategoria.setTooltip(new Tooltip("Agregar nueva categoría"));
+        btnAgregarCategoria.setOnAction(e -> agregarNuevaCategoria());
+
+        HBox hboxCategoria = new HBox(5, comboBoxCategoria, btnAgregarCategoria);
+        hboxCategoria.setAlignment(Pos.CENTER_LEFT);
         Button btnImagen = new Button("Elegir Imagen");
         Label lblImagen = new Label("Sin imagen");
         Button btnAgregar = new Button("Agregar Producto");
         Button btnEditar = new Button("Editar Producto");
         Button btnEliminar = new Button("Eliminar Producto");
         Button btnAsignarInsumos = new Button("Asignar Insumos");
-        Button btnReporte = new Button("Generar Reporte PDF");
+        Button btnReportePDF = new Button("Reporte Productos PDF");
 
         TableView<Producto> tableView = new TableView<>();
         TableColumn<Producto, String> tblColNombre = new TableColumn<>("Nombre");
@@ -114,24 +125,31 @@ public class CrudProductos {
             new GestionInsumos().mostrar(stage);
         });
 
-        btnReporte.setOnAction(event -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Guardar Reporte PDF");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf"));
-            File archivo = fileChooser.showSaveDialog(stage);
+        btnReportePDF.setOnAction(e -> {
+            TextInputDialog dialogo = new TextInputDialog("reporte_productos_categoria");
+            dialogo.setTitle("Nombre del Archivo");
+            dialogo.setHeaderText("Ingrese el nombre del archivo PDF:");
+            dialogo.setContentText("Nombre:");
 
-            if (archivo != null) {
-                ReportesPDF.generarReporteProductosMasVendidos(archivo.getAbsolutePath());
-            }
+            dialogo.showAndWait().ifPresent(nombre -> {
+                String ruta = "C:/Users/100032624/Documents/Topicos Avanzados/REPORTE PROD CATEG/" + nombre + ".pdf";
+                ReportesPDF.generarReporteProductosPorCategoria(ruta);
+
+                Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+                alerta.setTitle("PDF Generado");
+                alerta.setHeaderText(null);
+                alerta.setContentText("¡El reporte PDF de productos por categoría se generó correctamente!");
+                alerta.showAndWait();
+            });
         });
 
         VBox vBoxContenido = new VBox(10,
                 new Label("Nombre"), txtFieldNombre,
                 new Label("Precio"), txtFieldPrecio,
-                new Label("Categoría"), comboBoxCategoria,
+                new Label("Categoría"), hboxCategoria,
                 btnImagen, lblImagen,
                 btnAgregar, btnEditar, btnEliminar,
-                btnReporte
+                btnReportePDF
         );
         vBoxContenido.setPadding(new Insets(10));
         vBoxContenido.setStyle("-fx-background-color: #f0f8ff; -fx-border-radius: 15; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, gray, 10, 0, 0, 5);");
@@ -150,13 +168,102 @@ public class CrudProductos {
         stage.show();
     }
 
+    private void cargarCategoriasDesdeBaseDeDatos() {
+        categorias.clear();
+        try {
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
+            }
+            String sql = "SELECT nombre FROM categorias ORDER BY nombre";
+            Statement stmt = Conexion.connection.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+
+            while (rs.next()) {
+                categorias.add(rs.getString("nombre"));
+            }
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void agregarNuevaCategoria() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Nueva Categoría");
+        dialog.setHeaderText("Agregar nueva categoría de productos");
+        dialog.setContentText("Nombre de la categoría:");
+
+        dialog.showAndWait().ifPresent(nombreCategoria -> {
+            if (!nombreCategoria.trim().isEmpty()) {
+                try {
+                    if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                        Conexion.createConnection();
+                    }
+
+                    // Verificar si la categoría ya existe
+                    String checkSql = "SELECT nombre FROM categorias WHERE nombre = ?";
+                    PreparedStatement checkStmt = Conexion.connection.prepareStatement(checkSql);
+                    checkStmt.setString(1, nombreCategoria);
+                    ResultSet rs = checkStmt.executeQuery();
+
+                    if (rs.next()) {
+                        Alert alerta = new Alert(Alert.AlertType.WARNING, "La categoría ya existe.");
+                        alerta.showAndWait();
+                    } else {
+                        String insertSql = "INSERT INTO categorias (nombre) VALUES (?)";
+                        PreparedStatement pstmt = Conexion.connection.prepareStatement(insertSql);
+                        pstmt.setString(1, nombreCategoria);
+                        pstmt.executeUpdate();
+                        pstmt.close();
+
+                        categorias.add(nombreCategoria);
+                        categorias.sort(String::compareToIgnoreCase);
+                    }
+
+                    rs.close();
+                    checkStmt.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Alert alerta = new Alert(Alert.AlertType.ERROR, "Error al agregar categoría: " + e.getMessage());
+                    alerta.showAndWait();
+                }
+            }
+        });
+    }
+
     private void guardarProductosEnBaseDeDatos(Producto p) {
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
+
+            //Verificar si la categoría existe
+            String checkSql = "SELECT nombre FROM categorias WHERE nombre = ?";
+            PreparedStatement checkStmt = Conexion.connection.prepareStatement(checkSql);
+            checkStmt.setString(1, p.getCategoria());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (!rs.next()) {
+                //Si la categoría no existe, la creamos
+                String insertCategoriaSql = "INSERT INTO categorias (nombre) VALUES (?)";
+                PreparedStatement pstmtCategoria = Conexion.connection.prepareStatement(insertCategoriaSql);
+                pstmtCategoria.setString(1, p.getCategoria());
+                pstmtCategoria.executeUpdate();
+                pstmtCategoria.close();
+
+                //Actualizamos la lista de categorías en el ComboBox
+                Platform.runLater(() -> {
+                    categorias.add(p.getCategoria());
+                    categorias.sort(String::compareToIgnoreCase);
+                });
+            }
+            rs.close();
+            checkStmt.close();
+
+            //Insertar el producto
             String sql = "INSERT INTO productos (nombre, precio, cantidad, categoria, imagen) VALUES (?, ?, ?, ?, ?)";
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
             pstmt.setString(1, p.getNombre());
             pstmt.setDouble(2, p.getPrecio());
             pstmt.setInt(3, p.getCantidad());
@@ -171,11 +278,11 @@ public class CrudProductos {
 
     private void eliminarProductoEnBaseDeDatos(Producto p) {
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
             String sql = "DELETE FROM productos WHERE nombre = ? AND categoria = ?";
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
             pstmt.setString(1, p.getNombre());
             pstmt.setString(2, p.getCategoria());
             pstmt.executeUpdate();
@@ -188,11 +295,11 @@ public class CrudProductos {
     private void cargarProductosDesdeBaseDeDatos() {
         productos.clear();
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
             String sql = "SELECT * FROM productos";
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
 
             while (rs.next()) {

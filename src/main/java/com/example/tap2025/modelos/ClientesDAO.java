@@ -3,7 +3,9 @@ package com.example.tap2025.modelos;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public class ClientesDAO {
@@ -56,34 +58,44 @@ public class ClientesDAO {
     public void INSERT(){
         //String query = "INSERT INTO clientes VALUES(?,?,?,?,?)";
         //String sql = "insert into clientes values(?,?,?,?,?,?)";
-        String query = "INSERT INTO clientes(nomCte, telCte, direccion, emailCte) " +
-                "VALUES('"+nomCte+"','"+telCte+"','"+direccion+"','"+emailCte+"')";
-        try{
-            Statement stmt = conexion.connection.createStatement();
-            stmt.executeUpdate(query);
-        }catch (Exception e){
-            //trasa de ejecución
+        String query = "INSERT INTO clientes(nomCte, telCte, direccion, emailCte) VALUES(?, ?, ?, ?)";
+        try (PreparedStatement pstmt = Conexion.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, nomCte);
+            pstmt.setString(2, telCte);
+            pstmt.setString(3, direccion);
+            pstmt.setString(4, emailCte);
+            pstmt.executeUpdate();
+
+            // Obtener el ID generado
+            try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    idCte = rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public void UPDATE(){
-        String query = "UPDATE clientes SET nomCte = '"+nomCte+"', " +
-                "telCte = '"+telCte+"', direccion = '"+direccion+"', " +
-                "emailCte = ' "+emailCte+"' WHERE idCliente = "+idCte+";";
-        try{
-            Statement stmt = conexion.connection.createStatement();
-            stmt.executeUpdate(query);
-        }catch (Exception e){
+        String query = "UPDATE clientes SET nomCte = ?, telCte = ?, direccion = ?, emailCte = ? WHERE id_cliente = ?";
+        try (PreparedStatement pstmt = Conexion.connection.prepareStatement(query)) {
+            pstmt.setString(1, nomCte);
+            pstmt.setString(2, telCte);
+            pstmt.setString(3, direccion);
+            pstmt.setString(4, emailCte);
+            pstmt.setInt(5, idCte);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public void DELETE(){
-        String query = "DELETE FROM clientes WHERE idCliente = "+idCte+";";
+        String query = "DELETE FROM clientes WHERE id_cliente = "+idCte+";";
 
         try{
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             stmt.executeUpdate(query);
         }catch(Exception e){
             e.printStackTrace();
@@ -99,11 +111,11 @@ public class ClientesDAO {
         ClientesDAO objC;
 
         try{
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             ResultSet rs = stmt.executeQuery(query);
             while(rs.next()){
                 objC = new ClientesDAO();
-                objC.setIdCte(rs.getInt("idCliente"));
+                objC.setIdCte(rs.getInt("id_cliente"));
                 objC.setNomCte(rs.getString("nomCte"));
                 objC.setTelCte(rs.getString("telCte"));
                 objC.setDireccion(rs.getString("direccion"));

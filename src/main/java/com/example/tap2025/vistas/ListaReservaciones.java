@@ -1,7 +1,7 @@
 package com.example.tap2025.vistas;
 
 import com.example.tap2025.modelos.Reservacion;
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -66,16 +66,21 @@ public class ListaReservaciones {
     private void cargarReservaciones() {
         listaReservaciones.clear();
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-            Statement stmt = conexion.connection.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM reservaciones");
+            Statement stmt = Conexion.connection.createStatement();
+            ResultSet rs = stmt.executeQuery(
+                    "SELECT r.id_reservacion, r.id_cliente, c.nomCte, r.personas, r.fecha, r.hora, r.mesa " +
+                            "FROM reservaciones r JOIN clientes c ON r.id_cliente = c.id_cliente"
+            );
+
 
             while (rs.next()) {
                 listaReservaciones.add(new Reservacion(
-                        rs.getInt("id"),
-                        rs.getString("nombre_cliente"),
+                        rs.getInt("id_reservacion"),
+                        rs.getInt("id_cliente"),
+                        rs.getString("nomCte"),
                         rs.getInt("personas"),
                         rs.getString("fecha"),
                         rs.getString("hora"),
@@ -95,13 +100,13 @@ public class ListaReservaciones {
         Reservacion seleccionada = tableView.getSelectionModel().getSelectedItem();
         if (seleccionada != null) {
             try {
-                if (conexion.connection == null || conexion.connection.isClosed()) {
-                    conexion.createConnection();
+                if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                    Conexion.createConnection();
                 }
 
-                String sql = "DELETE FROM reservaciones WHERE id = ?";
-                PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
-                pstmt.setInt(1, seleccionada.getId());
+                String sql = "DELETE FROM reservaciones WHERE id_reservacion = ?";
+                PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
+                pstmt.setInt(1, seleccionada.getIdReservacion());
                 pstmt.executeUpdate();
                 pstmt.close();
 

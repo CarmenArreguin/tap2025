@@ -1,6 +1,6 @@
 package com.example.tap2025.vistas;
 
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -94,10 +94,10 @@ public class GestionInsumos {
     private void cargarProductos() {
         ObservableList<String> productos = FXCollections.observableArrayList();
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT nombre FROM productos");
 
             while (rs.next()) {
@@ -114,10 +114,10 @@ public class GestionInsumos {
     private void cargarInsumos() {
         ObservableList<String> insumos = FXCollections.observableArrayList();
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-            Statement stmt = conexion.connection.createStatement();
+            Statement stmt = Conexion.connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT nombre FROM insumos");
 
             while (rs.next()) {
@@ -137,14 +137,14 @@ public class GestionInsumos {
         if (productoSeleccionado == null) return;
 
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
 
             int idProducto = obtenerIdProducto(productoSeleccionado);
 
-            String sql = "SELECT i.nombre, pi.cantidad FROM producto_insumos pi INNER JOIN insumos i ON pi.id_insumo = i.id WHERE pi.id_producto = ?";
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            String sql = "SELECT i.nombre, pi.cantidad FROM producto_insumos pi INNER JOIN insumos i ON pi.id_insumo = i.id_insumo WHERE pi.id_producto = ?";
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
             pstmt.setInt(1, idProducto);
             ResultSet rs = pstmt.executeQuery();
 
@@ -173,22 +173,22 @@ public class GestionInsumos {
         try {
             double cantidad = Double.parseDouble(cantidadStr);
 
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
 
             int idProducto = obtenerIdProducto(producto);
             int idInsumo = obtenerIdInsumo(insumo);
 
             String checkSql = "SELECT * FROM producto_insumos WHERE id_producto = ? AND id_insumo = ?";
-            PreparedStatement checkStmt = conexion.connection.prepareStatement(checkSql);
+            PreparedStatement checkStmt = Conexion.connection.prepareStatement(checkSql);
             checkStmt.setInt(1, idProducto);
             checkStmt.setInt(2, idInsumo);
             ResultSet rs = checkStmt.executeQuery();
 
             if (rs.next()) {
                 String updateSql = "UPDATE producto_insumos SET cantidad = ? WHERE id_producto = ? AND id_insumo = ?";
-                PreparedStatement updateStmt = conexion.connection.prepareStatement(updateSql);
+                PreparedStatement updateStmt = Conexion.connection.prepareStatement(updateSql);
                 updateStmt.setDouble(1, cantidad);
                 updateStmt.setInt(2, idProducto);
                 updateStmt.setInt(3, idInsumo);
@@ -196,7 +196,7 @@ public class GestionInsumos {
                 updateStmt.close();
             } else {
                 String insertSql = "INSERT INTO producto_insumos (id_producto, id_insumo, cantidad) VALUES (?, ?, ?)";
-                PreparedStatement insertStmt = conexion.connection.prepareStatement(insertSql);
+                PreparedStatement insertStmt = Conexion.connection.prepareStatement(insertSql);
                 insertStmt.setInt(1, idProducto);
                 insertStmt.setInt(2, idInsumo);
                 insertStmt.setDouble(3, cantidad);
@@ -213,15 +213,15 @@ public class GestionInsumos {
 
     private void eliminarAsignacion(AsignacionInsumo asignacion) {
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
 
             int idProducto = obtenerIdProducto(comboProductos.getValue());
             int idInsumo = obtenerIdInsumo(asignacion.getNombreInsumo());
 
             String sql = "DELETE FROM producto_insumos WHERE id_producto = ? AND id_insumo = ?";
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
             pstmt.setInt(1, idProducto);
             pstmt.setInt(2, idInsumo);
             pstmt.executeUpdate();
@@ -232,13 +232,13 @@ public class GestionInsumos {
     }
 
     private int obtenerIdProducto(String nombre) throws SQLException {
-        String sql = "SELECT id FROM productos WHERE nombre = ?";
-        PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+        String sql = "SELECT id_producto FROM productos WHERE nombre = ?";
+        PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
         pstmt.setString(1, nombre);
         ResultSet rs = pstmt.executeQuery();
         int id = 0;
         if (rs.next()) {
-            id = rs.getInt("id");
+            id = rs.getInt("id_producto");
         }
         rs.close();
         pstmt.close();
@@ -246,13 +246,13 @@ public class GestionInsumos {
     }
 
     private int obtenerIdInsumo(String nombre) throws SQLException {
-        String sql = "SELECT id FROM insumos WHERE nombre = ?";
-        PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+        String sql = "SELECT id_insumo FROM insumos WHERE nombre = ?";
+        PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
         pstmt.setString(1, nombre);
         ResultSet rs = pstmt.executeQuery();
         int id = 0;
         if (rs.next()) {
-            id = rs.getInt("id");
+            id = rs.getInt("id_insumo");
         }
         rs.close();
         pstmt.close();

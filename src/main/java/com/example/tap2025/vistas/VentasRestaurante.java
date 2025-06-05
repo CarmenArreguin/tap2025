@@ -1,7 +1,8 @@
 package com.example.tap2025.vistas;
 
+import com.example.tap2025.modelos.EmpleadoDAO;
 import com.example.tap2025.modelos.Producto;
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import com.example.tap2025.utilidades.TicketPDF;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -15,11 +16,10 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -28,61 +28,142 @@ public class VentasRestaurante {
     private final Map<String, ObservableList<Producto>> pedidosPorMesa = new HashMap<>();
     private final ListView<String> listViewPedido = new ListView<>();
     private final Label lblTotal = new Label("Total: $0.0");
+    private final Label lblMeseroAsignado = new Label("Mesero: No asignado");
     private final FlowPane mesaContainer = new FlowPane();
     private final ComboBox<String> comboBoxCategorias = new ComboBox<>();
+    private final ComboBox<String> comboBoxClientes = new ComboBox<>();
     private final TilePane tilePaneProductos = new TilePane();
     private final Map<String, List<Producto>> categoriaProductos = new HashMap<>();
     private int mesaSeleccionada = 1;
     private final Map<Integer, Button> botonesMesas = new HashMap<>();
     private final Map<Integer, Boolean> mesasOcupadas = new HashMap<>();
+    private EmpleadoDAO meseroActual;
+    private VBox root;
 
     public void mostrar(Stage stage) {
+        // Inicializar el contenedor principal solo una vez
+        if (root == null) {
+            root = new VBox(10);
+            root.setPadding(new Insets(10));
+        } else {
+            root.getChildren().clear(); // Limpiar hijos existentes
+        }
+
+        // Reinicializar estado
+        reiniciarEstado();
+
+        // Configurar interfaz
+        configurarInterfaz(stage);
+    }
+
+    private void reiniciarEstado() {
+        pedidosPorMesa.clear();
+        mesasOcupadas.clear();
+        botonesMesas.clear();
+        meseroActual = null;
+        lblMeseroAsignado.setText("Mesero: No asignado");
+        listViewPedido.getItems().clear();
+        lblTotal.setText("Total: $0.0");
+        tilePaneProductos.getChildren().clear();
+        comboBoxClientes.getSelectionModel().clearSelection();
+        comboBoxCategorias.getSelectionModel().clearSelection();
+    }
+
+    private void configurarInterfaz(Stage stage) {
         inicializarProductos();
-        VBox root = new VBox(10);
-        root.setPadding(new Insets(10));
+        cargarClientes();
         mostrarMesas();
 
-        //Esto es para tener las categorías de forma tipo táctil, solamente que usamos en este caso el mouse.
-        comboBoxCategorias.getItems().addAll(categoriaProductos.keySet());
-        comboBoxCategorias.setOnAction(e -> mostrarProductos());
+        // Configurar combobox de categorías
+        comboBoxCategorias.getItems().setAll(categoriaProductos.keySet());
         comboBoxCategorias.setStyle("-fx-font-size: 18px;");
+        comboBoxCategorias.setOnAction(e -> mostrarProductos());
 
+        // Configurar tilePane
         tilePaneProductos.setHgap(10);
         tilePaneProductos.setVgap(10);
         tilePaneProductos.setPrefColumns(4);
 
-        Button btnGenerarTicket = new Button("Generar Ticket PDF");
-        btnGenerarTicket.setStyle("-fx-font-size: 14px; -fx-background-color: #EBC093;");
+        // Configurar botones y paneles
+        Button btnGenerarTicket = crearBotonGenerarTicket(stage);
+        Button btnGuardar = crearBotonGuardar();
+        Button btnLimpiar = crearBotonLimpiar();
 
-        btnGenerarTicket.setOnAction(event -> generarTicket(stage));
-
+        // Panel de pedido
         VBox vboxPedido = new VBox(10);
         vboxPedido.setPadding(new Insets(10));
-        vboxPedido.getChildren().addAll(new Label("Pedido actual."), listViewPedido, lblTotal, btnGenerarTicket);
+        vboxPedido.getChildren().addAll(
+                new Label("Pedido actual"),
+                lblMeseroAsignado,
+                listViewPedido,
+                lblTotal,
+                btnGenerarTicket,
+                btnGuardar,
+                btnLimpiar
+        );
 
-        Button btnGuardar = new Button("Guardar Pedido");
-        btnGuardar.setStyle("-fx-font-size: 14px; -fx-background-color: #83CBFF;");
-        btnGuardar.setOnAction(e -> guardarPedido());
-
-        Button btnLimpiar = new Button("Limpiar Pedido.");
-        btnLimpiar.setStyle("-fx-font-size: 14px; -fx-background-color: #EF9A9A;");
-        btnLimpiar.setOnAction(e -> limpiarPedido());
-
-        vboxPedido.getChildren().addAll(btnGuardar, btnLimpiar);
-
+        // Panel de productos con scroll
         ScrollPane scrollPaneProductos = new ScrollPane(tilePaneProductos);
         scrollPaneProductos.setFitToWidth(true);
         scrollPaneProductos.setPrefHeight(600);
         scrollPaneProductos.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
+        // Sección central
         HBox seccionCentral = new HBox(15, scrollPaneProductos, vboxPedido);
 
-        root.getChildren().addAll(new Label("Seleccionar mesa:"), mesaContainer, new Label("Seleccionar categoría:"), comboBoxCategorias, seccionCentral);
+        // Agregar componentes al root
+        root.getChildren().addAll(
+                new Label("Cliente:"), comboBoxClientes,
+                new Label("Seleccionar mesa:"), mesaContainer,
+                new Label("Seleccionar categoría:"), comboBoxCategorias,
+                seccionCentral
+        );
 
+        // Configurar escena
         Scene escena = new Scene(root, 1000, 700);
         stage.setScene(escena);
-        stage.setTitle("Ventas Restaurante :)");
+        stage.setTitle("Ventas Restaurante");
         stage.show();
+    }
+
+    private Button crearBotonGenerarTicket(Stage stage) {
+        Button btn = new Button("Generar Ticket PDF");
+        btn.setStyle("-fx-font-size: 14px; -fx-background-color: #EBC093;");
+        btn.setOnAction(event -> generarTicket(stage));
+        return btn;
+    }
+
+    private Button crearBotonGuardar() {
+        Button btn = new Button("Guardar Pedido");
+        btn.setStyle("-fx-font-size: 14px; -fx-background-color: #83CBFF;");
+        btn.setOnAction(e -> guardarPedido());
+        return btn;
+    }
+
+    private Button crearBotonLimpiar() {
+        Button btn = new Button("Limpiar Pedido");
+        btn.setStyle("-fx-font-size: 14px; -fx-background-color: #EF9A9A;");
+        btn.setOnAction(e -> limpiarPedido());
+        return btn;
+    }
+
+    private void cargarClientes() {
+        ObservableList<String> clientes = FXCollections.observableArrayList();
+        try {
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
+            }
+            Statement stmt = Conexion.connection.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT nomCte FROM clientes");
+            while (rs.next()) {
+                clientes.add(rs.getString("nomCte"));
+            }
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        comboBoxClientes.setItems(clientes);
     }
 
     private void mostrarMesas() {
@@ -97,6 +178,7 @@ public class VentasRestaurante {
             btnMesa.setStyle("-fx-font-size: 16px; -fx-background-color: #AAD1AC;");
             btnMesa.setOnAction(e -> {
                 mesaSeleccionada = numMesa;
+                asignarMeseroAMesa();
                 actualizarColoresMesas(); //Esto hace que se actualicen los colores.
                 mostrarProductos();
                 actualizarPedido();
@@ -105,6 +187,53 @@ public class VentasRestaurante {
             botonesMesas.put(numMesa, btnMesa);
             pedidosPorMesa.put("Mesa " + numMesa, FXCollections.observableArrayList());
             mesasOcupadas.put(numMesa, false); //Para que al principio este libre la mesa.
+        }
+    }
+
+    private void asignarMeseroAMesa() {
+        // Solo pedir contraseña si no hay mesero asignado o si la mesa está ocupada
+        if (meseroActual == null || mesasOcupadas.get(mesaSeleccionada)) {
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Asignar Mesero");
+            dialog.setHeaderText("Ingrese la contraseña del mesero");
+            dialog.setContentText("Contraseña:");
+
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                String password = result.get();
+                meseroActual = EmpleadoDAO.autenticarPorPassword(password);
+
+                if (meseroActual != null) {
+                    lblMeseroAsignado.setText("Mesero: " + meseroActual.getNombres() + " " + meseroActual.getApellidos());
+                    guardarAsignacionMesa(mesaSeleccionada, meseroActual.getIdEmpleado());
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Error");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Contraseña incorrecta o empleado no autorizado");
+                    alert.showAndWait();
+                }
+            }
+        }
+    }
+
+    private void guardarAsignacionMesa(int mesa, int idEmpleado) {
+        String query = "INSERT INTO mesas_asignadas (mesa, id_empleado, fecha_hora) VALUES (?, ?, NOW()) " +
+                "ON DUPLICATE KEY UPDATE id_empleado = ?, fecha_hora = NOW()";
+
+        try {
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
+            }
+
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(query);
+            pstmt.setInt(1, mesa);
+            pstmt.setInt(2, idEmpleado);
+            pstmt.setInt(3, idEmpleado);
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -158,9 +287,21 @@ public class VentasRestaurante {
     }
 
     private void agregarProducto(Producto producto) {
+        if (meseroActual == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Mesero no asignado");
+            alert.setHeaderText(null);
+            alert.setContentText("Debe asignar un mesero a la mesa antes de agregar productos");
+            alert.showAndWait();
+            return;
+        }
+
         String mesa = "Mesa " + mesaSeleccionada;
         ObservableList<Producto> pedido = pedidosPorMesa.get(mesa);
-        Producto existente = pedido.stream().filter(p -> p.getNombre().equals(producto.getNombre())).findFirst().orElse(null);
+        Producto existente = pedido.stream()
+                .filter(p -> p.getNombre().equals(producto.getNombre()))
+                .findFirst()
+                .orElse(null);
         if (existente != null) {
             existente.incrementarCant();
         } else {
@@ -188,13 +329,22 @@ public class VentasRestaurante {
         ObservableList<Producto> pedido = pedidosPorMesa.get(mesa);
         if (pedido.isEmpty()) return;
 
-        String sql = "INSERT INTO pedidos (mesa, producto, cantidad, precio, total, fecha) VALUES (?, ?, ?, ?, ?, ?)";
+        if (meseroActual == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Mesero no asignado");
+            alert.setHeaderText(null);
+            alert.setContentText("Debe asignar un mesero a la mesa antes de guardar el pedido");
+            alert.showAndWait();
+            return;
+        }
+
+        String sql = "INSERT INTO pedidos (mesa, producto, cantidad, precio, total_ventas, fecha, id_empleado) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try {
-            if (conexion.connection == null || conexion.connection.isClosed()) {
-                conexion.createConnection();
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-            PreparedStatement pstmt = conexion.connection.prepareStatement(sql);
+            PreparedStatement pstmt = Conexion.connection.prepareStatement(sql);
 
             for (Producto p : pedido) {
                 pstmt.setString(1, mesa);
@@ -203,13 +353,19 @@ public class VentasRestaurante {
                 pstmt.setDouble(4, p.getPrecio());
                 pstmt.setDouble(5, p.getTotal());
                 pstmt.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
+                pstmt.setInt(7, meseroActual.getIdEmpleado());
                 pstmt.executeUpdate();
             }
             pstmt.close();
-            mesasOcupadas.put(mesaSeleccionada, true); //Se marca como ocupada.
+            mesasOcupadas.put(mesaSeleccionada, true);
             actualizarColoresMesas();
             actualizarPedido();
-            System.out.println("Pedido guardado en la base de datos.");
+            Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+            alerta.setTitle("Pedido Guardado");
+            alerta.setHeaderText(null);
+            alerta.setContentText("El pedido ha sido guardado.");
+            alerta.showAndWait();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -232,29 +388,71 @@ public class VentasRestaurante {
         String mesa = "Mesa " + mesaSeleccionada;
         ObservableList<Producto> pedido = pedidosPorMesa.get(mesa);
 
+        // Validación de pedido vacío
         if (pedido == null || pedido.isEmpty()) {
             Alert alerta = new Alert(Alert.AlertType.WARNING, "No hay productos en el pedido.");
             alerta.showAndWait();
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Guardar Ticket PDF");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivo PDF", "*.pdf"));
-        File archivo = fileChooser.showSaveDialog(stage);
-
-        if (archivo != null) {
-            double totalPedido = pedido.stream().mapToDouble(Producto::getTotal).sum();
-            TicketPDF.generarTicket("Mesa " + mesaSeleccionada, pedido, totalPedido, archivo);
-
-            Alert alerta = new Alert(Alert.AlertType.INFORMATION, "Ticket generado exitosamente.");
-            alerta.showAndWait();
-
-            pedido.clear();
-            mesasOcupadas.put(mesaSeleccionada, false);
-            actualizarColoresMesas();
-            actualizarPedido();
+        // Validación de mesero asignado
+        if (meseroActual == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Mesero no asignado");
+            alert.setHeaderText(null);
+            alert.setContentText("Debe asignar un mesero a la mesa antes de generar el ticket");
+            alert.showAndWait();
+            return;
         }
+
+        // Manejo seguro del cliente seleccionado
+        String clienteSeleccionado = comboBoxClientes.getValue() != null ?
+                comboBoxClientes.getValue().trim() : "No especificado";
+
+        // Configuración del diálogo para el nombre del archivo
+        TextInputDialog dialogo = new TextInputDialog("ticket_mesa_" + mesaSeleccionada);
+        dialogo.setTitle("Nombre del Ticket PDF");
+        dialogo.setHeaderText("Ingrese el nombre del archivo PDF del ticket:");
+        dialogo.setContentText("Nombre:");
+
+        dialogo.showAndWait().ifPresent(nombreArchivo -> {
+            try {
+                String ruta = "C:/Users/100032624/Documents/Topicos Avanzados/TICKETS PDF/" + nombreArchivo + ".pdf";
+                File archivo = new File(ruta);
+
+                // Crear directorio si no existe
+                archivo.getParentFile().mkdirs();
+
+                double totalPedido = pedido.stream().mapToDouble(Producto::getTotal).sum();
+                String meseroNombre = meseroActual.getNombres() + " " + meseroActual.getApellidos();
+
+                // Generar el ticket
+                TicketPDF.generarTicket(mesa, pedido, totalPedido, archivo, clienteSeleccionado, meseroNombre);
+
+                // Mostrar confirmación
+                Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+                alerta.setTitle("Ticket Generado");
+                alerta.setHeaderText(null);
+                alerta.setContentText("¡El ticket PDF se generó correctamente en:\n" + ruta + "!");
+                alerta.showAndWait();
+
+                // Limpiar el pedido después de generar el ticket
+                pedido.clear();
+                mesasOcupadas.put(mesaSeleccionada, false);
+                meseroActual = null;
+                lblMeseroAsignado.setText("Mesero: No asignado");
+                actualizarColoresMesas();
+                actualizarPedido();
+
+            } catch (Exception e) {
+                Alert error = new Alert(Alert.AlertType.ERROR);
+                error.setTitle("Error al generar ticket");
+                error.setHeaderText(null);
+                error.setContentText("Ocurrió un error al generar el ticket: " + e.getMessage());
+                error.showAndWait();
+                e.printStackTrace();
+            }
+        });
     }
 
     private void inicializarProductos() {
@@ -279,7 +477,7 @@ public class VentasRestaurante {
                 new Producto("Tostada de ceviche de pulpo", 79, "Tostadas", "/images/Tostadas/CevichePulpo.jpg"),
                 new Producto("Tostada de marlin guisado", 71, "Tostadas", "/images/Tostadas/MarlinGuisado.jpg")
         ));
-        categoriaProductos.put("Cocteles", List.of(
+        categoriaProductos.put("Coctelería", List.of(
                 new Producto("Camarón", 235, "Cocteles", "/images/Costeles/Camaron.jpg"),
                 new Producto("Pulpo", 235, "Cocteles", "/images/Costeles/Pulpo.jpg"),
                 new Producto("Camarón y Pulpo", 235, "Cocteles", "/images/Costeles/CamaronPulpo.jpg")
@@ -377,7 +575,7 @@ public class VentasRestaurante {
                 new Producto("Michelob ultra", 60, "Cervezas", "/images/Cervezas/MichelobUltra.jpg"),
                 new Producto("Corona cero", 40, "Cervezas", "/images/Cervezas/CoronaCero.jpg")
         ));
-        categoriaProductos.put("Bebidas", List.of(
+        categoriaProductos.put("Bebidas Sin Alcohol", List.of(
                 new Producto("Refresco", 37, "Bebidas", "images/Bebidas/Refrescos.jpg"),
                 new Producto("Limonada", 40, "Bebidas", "images/Bebidas/Limonada.png"),
                 new Producto("Naranjada", 40, "Bebidas", "/images/Bebidas/Naranjada.jpg"),
@@ -426,26 +624,44 @@ public class VentasRestaurante {
                 new Producto("Torres 20 años", 325, "Brandy", "/images/Brandy/Torres20.jpg"),
                 new Producto("Terry centenario", 165, "Brandy", "/images/Brandy/TerryCentenario.jpg")
         ));
-        File archivo = new File("productos.csv");
-        if (!archivo.exists()) return;
+        cargarCategoriasYProductosDesdeBD();
+    }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(archivo))) {
-            String linea;
-            while ((linea = reader.readLine()) != null) {
-                String[] datos = linea.split(",", -1);
-                if (datos.length == 5) {
-                    String nombre = datos[0];
-                    double precio = Double.parseDouble(datos[1]);
-                    int cantidad = Integer.parseInt(datos[2]); //Esta variable por ahora no la usamos.
-                    String categoria = datos[3];
-                    String imagen = datos[4];
-
-                    Producto productoNuevo = new Producto(nombre, precio, categoria, imagen);
-                    categoriaProductos.computeIfAbsent(categoria, k -> new ArrayList<>()).add(productoNuevo);
-                }
+    private void cargarCategoriasYProductosDesdeBD() {
+        try {
+            if (Conexion.connection == null || Conexion.connection.isClosed()) {
+                Conexion.createConnection();
             }
-        } catch (IOException e) {
-            System.err.println("Error al leer productos: " + e.getMessage());
+
+            //Primero cargar categorías
+            Statement stmtCategorias = Conexion.connection.createStatement();
+            ResultSet rsCategorias = stmtCategorias.executeQuery("SELECT nombre FROM categorias ORDER BY nombre");
+
+            while (rsCategorias.next()) {
+                String categoria = rsCategorias.getString("nombre");
+                categoriaProductos.put(categoria, new ArrayList<>());
+            }
+            rsCategorias.close();
+            stmtCategorias.close();
+
+            //Luego cargar productos por categoría
+            Statement stmtProductos = Conexion.connection.createStatement();
+            ResultSet rsProductos = stmtProductos.executeQuery("SELECT nombre, precio, categoria, imagen FROM productos");
+
+            while (rsProductos.next()) {
+                String nombre = rsProductos.getString("nombre");
+                double precio = rsProductos.getDouble("precio");
+                String categoria = rsProductos.getString("categoria");
+                String imagen = rsProductos.getString("imagen");
+
+                Producto producto = new Producto(nombre, precio, categoria, imagen);
+                categoriaProductos.get(categoria).add(producto);
+            }
+            rsProductos.close();
+            stmtProductos.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

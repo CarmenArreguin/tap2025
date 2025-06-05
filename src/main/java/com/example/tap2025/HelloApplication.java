@@ -1,13 +1,9 @@
 package com.example.tap2025;
 
-import com.example.tap2025.componentes.Hilo;
-import com.example.tap2025.modelos.conexion;
+import com.example.tap2025.modelos.Conexion;
 import com.example.tap2025.vistas.*;
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -21,7 +17,7 @@ public class HelloApplication extends Application {
     private VBox vBox;
     private MenuBar mnbPrincipal;
     private Menu menCompetencia1, menCompetencia2;
-    private MenuItem mitCalculadora, mitRestaurante, mitRompecabezas, mitHilos, mitAdmin;
+    private MenuItem mitCalculadora, mitRestaurante, mitRompecabezas, mitHilos, mitAdmin, mitAgregarInsumo;
     private Scene escena;
 
     void CrearUI(){
@@ -37,10 +33,12 @@ public class HelloApplication extends Application {
         menCompetencia1.getItems().addAll(mitCalculadora, mitRestaurante, mitRompecabezas);
         mitHilos = new MenuItem("Celayork");
         mitHilos.setOnAction(event -> new Celayork());
-        mitAdmin = new MenuItem("Administrar Productos");
+        mitAdmin = new MenuItem("Administrador");
         mitAdmin.setOnAction(event -> new LoginAdministrador().mostrar(new Stage()));
+        mitAgregarInsumo = new MenuItem("Agregar Insumo");
+        mitAgregarInsumo.setOnAction(event -> new AgregarInsumo().mostrar(new Stage()));
         menCompetencia2 = new Menu("Competencia 2");
-        menCompetencia2.getItems().addAll(mitHilos, mitAdmin);
+        menCompetencia2.getItems().addAll(mitHilos, mitAdmin, mitAgregarInsumo);
 
         //No recibe parametros.
         mnbPrincipal = new MenuBar();
@@ -60,7 +58,7 @@ public class HelloApplication extends Application {
 //        new Hilo("Ruta Monte Blanco").start();
 //        new Hilo("Ruta Tenería").start();
 
-        conexion.createConnection();
+        Conexion.createConnection();
         CrearUI();
         stage.setTitle("Hola Mundo de Eventos :)");
         stage.setScene(escena);
